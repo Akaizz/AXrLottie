@@ -1,5 +1,4 @@
 cmake_minimum_required( VERSION 3.3 )
-
 #declare project
 project( rlottie VERSION 0.2 LANGUAGES C CXX ASM)
 
@@ -15,6 +14,7 @@ endif()
 #declare target
 add_library( rlottie )
 set_target_properties( rlottie PROPERTIES DEFINE_SYMBOL RLOTTIE_BUILD )
+
 # Use 16 KB ELF alignment to support devices with page size greater than 4 KB
 target_link_options(rlottie PRIVATE "-Wl,-z,max-page-size=16384")
 
@@ -23,9 +23,9 @@ set(player_version_major 0)
 set(player_version_minor 2)
 set(player_version ${player_version_major}.${player_version_minor})
 set_target_properties(rlottie PROPERTIES
-                        VERSION    ${player_version}
-                        SOVERSION  ${player_version_major}
-                      )
+        VERSION    ${player_version}
+        SOVERSION  ${player_version_major}
+)
 
 #declare alias so that library can be used inside the build tree, e.g. when testing
 add_library(rlottie::rlottie ALIAS rlottie)
@@ -38,57 +38,84 @@ option(LOTTIE_CCACHE "Enable LOTTIE ccache SUPPORT" OFF)
 option(LOTTIE_ASAN "Compile with asan" OFF)
 
 set(LOTTIE_MODULE_PATH "${CMAKE_SHARED_LIBRARY_PREFIX}rlottie-image-loader${CMAKE_SHARED_LIBRARY_SUFFIX}"
-    CACHE STRING "Absolute or relative path to dynamic loader plugin.")
+        CACHE STRING "Absolute or relative path to dynamic loader plugin.")
 
 configure_file(${CMAKE_CURRENT_LIST_DIR}/cmake/config.h.in config.h)
 
 target_include_directories(rlottie
-    PRIVATE
+        PRIVATE
         "${CMAKE_CURRENT_BINARY_DIR}"
-    )
+)
 
 #declare common target compilation options
 target_compile_options(rlottie
-                    PUBLIC
-                    PRIVATE
-                        -std=c++14
-                        -fno-exceptions
-                        -fno-unwind-tables
-                        -fno-asynchronous-unwind-tables
-                        -fno-rtti
-                        -Wall
-                        -fvisibility=hidden
-                    )
+        PUBLIC
+        PRIVATE
+        -std=c++14
+        -fno-exceptions
+        -fno-unwind-tables
+        -fno-asynchronous-unwind-tables
+        -fno-rtti
+        -Wall
+        -fvisibility=hidden
+)
 
 #MSVC does not recognize these parameters
 if (NOT WIN32)
     target_compile_options(rlottie
-                        PUBLIC
-                        PRIVATE
-                            -Wnon-virtual-dtor
-                            -Woverloaded-virtual
-                            -Wno-unused-parameter
-                        )
+            PUBLIC
+            PRIVATE
+            -Wnon-virtual-dtor
+            -Woverloaded-virtual
+            -Wno-unused-parameter
+    )
 endif()
 
 if (WIN32 AND NOT BUILD_SHARED_LIBS)
     target_compile_definitions(rlottie PUBLIC -DRLOTTIE_BUILD=0)
 endif()
 
+# Check if we're building for ARM and enable ASM compiler for NEON
+if(ANDROID AND (CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a"))
+    enable_language(ASM)
+
+    # Add pixman NEON assembly sources for ARM builds
+    if(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
+        # For ARMv7 with NEON
+        set(PIXMAN_ARM_NEON_SOURCES
+                src/vector/pixman/pixman-arm-neon-asm.S
+                src/vector/pixman/pixman-arm-neon.c
+        )
+        target_compile_definitions(rlottie PRIVATE -DPIXMAN_ARM_NEON)
+    elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
+        # For ARM64 with NEON
+        set(PIXMAN_ARM_NEON_SOURCES
+                src/vector/pixman/pixman-arm-neon-asm-bilinear.S
+                src/vector/pixman/pixman-arm-neon.c
+        )
+        target_compile_definitions(rlottie PRIVATE -DPIXMAN_ARM_NEON)
+    endif()
+
+    # Add the pixman sources to rlottie target
+    target_sources(rlottie PRIVATE ${PIXMAN_ARM_NEON_SOURCES})
+
+    # Set ASM flags for NEON assembly
+    set_property(SOURCE ${PIXMAN_ARM_NEON_SOURCES} PROPERTY COMPILE_FLAGS "-mfpu=neon")
+endif()
+
 #declare dependancy
 set( CMAKE_THREAD_PREFER_PTHREAD TRUE )
 find_package( Threads )
-
 target_link_libraries(rlottie
-                    PUBLIC
-                        "${CMAKE_THREAD_LIBS_INIT}"
-                     )
+        PUBLIC
+        "${CMAKE_THREAD_LIBS_INIT}"
+)
 
 if (NOT APPLE AND NOT WIN32)
     target_link_libraries(rlottie
-                        PRIVATE
-                            "-Wl,--version-script=${CMAKE_SOURCE_DIR}/rlottie.expmap"
-                          )
+            PRIVATE
+            "-Wl,--version-script=${CMAKE_SOURCE_DIR}/rlottie.expmap"
+    )
 endif()
 
 if (LOTTIE_MODULE)
@@ -99,14 +126,14 @@ endif()
 if (NOT LOTTIE_ASAN)
     if(APPLE)
         target_link_libraries(rlottie
-                            PUBLIC
-                                 "-Wl, -undefined error"
-                              )
+                PUBLIC
+                "-Wl, -undefined error"
+        )
     else()
         target_link_libraries(rlottie
-                            PUBLIC
-                                 "-Wl,--no-undefined"
-                              )
+                PUBLIC
+                "-Wl,--no-undefined"
+        )
     endif()
 endif()
 
@@ -130,7 +157,6 @@ if (NOT LIB_INSTALL_DIR)
     set (LIB_INSTALL_DIR "/usr/lib")
 endif (NOT LIB_INSTALL_DIR)
 
-
 #declare source and include files
 add_subdirectory(inc)
 add_subdirectory(src)
@@ -143,7 +169,6 @@ SET(INCDIR ${PREFIX}/include)
 CONFIGURE_FILE(${PROJECT_NAME}.pc.in ${PROJECT_NAME}.pc)
 INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
-
 #install header
 install(FILES
         inc/rlottie.h
@@ -153,40 +178,37 @@ install(FILES
 
 #install lib
 install( TARGETS rlottie EXPORT rlottie-targets
-         LIBRARY     DESTINATION    ${LIB_INSTALL_DIR}
-         ARCHIVE     DESTINATION    ${LIB_INSTALL_DIR}
-         INCLUDES    DESTINATION    include
-       )
+        LIBRARY     DESTINATION    ${LIB_INSTALL_DIR}
+        ARCHIVE     DESTINATION    ${LIB_INSTALL_DIR}
+        INCLUDES    DESTINATION    include
+)
 
 #install config file.
-
 install( EXPORT rlottie-targets
-         FILE          rlottieTargets.cmake
-         NAMESPACE     rlottie::
-         DESTINATION   ${LIB_INSTALL_DIR}/cmake/rlottie
-       )
-
+        FILE          rlottieTargets.cmake
+        NAMESPACE     rlottie::
+        DESTINATION   ${LIB_INSTALL_DIR}/cmake/rlottie
+)
 
 #Create a ConfigVersion.cmake file
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfigVersion.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY AnyNewerVersion
+        ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY AnyNewerVersion
 )
 
 configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/rlottieConfig.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfig.cmake
-    INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/rlottie
+        ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfig.cmake
+        INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/rlottie
 )
 
 #Install the config, configversion and custom find modules
 install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfigVersion.cmake
-    DESTINATION ${LIB_INSTALL_DIR}/cmake/rlottie
+        ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/rlottieConfigVersion.cmake
+        DESTINATION ${LIB_INSTALL_DIR}/cmake/rlottie
 )
-
 
 add_library(jlottie SHARED lottie.cpp)
 # Use 16 KB ELF alignment to support devices with page size greater than 4 KB
@@ -196,7 +218,7 @@ add_library(jlz4 SHARED lz4/lz4.c)
 target_include_directories(jlottie
         PRIVATE
         "${CMAKE_CURRENT_LIST_DIR}"
-        )
+)
 # Use 16 KB ELF alignment to support devices with page size greater than 4 KB
 target_link_options(jlz4 PRIVATE "-Wl,-z,max-page-size=16384")
 
@@ -204,14 +226,14 @@ add_library(rlottie2gif SHARED gif/gif.cpp)
 target_include_directories(rlottie2gif
         PRIVATE
         "${CMAKE_CURRENT_LIST_DIR}/gif"
-        )
-
+)
 # Use 16 KB ELF alignment to support devices with page size greater than 4 KB
 target_link_options(rlottie2gif PRIVATE "-Wl,-z,max-page-size=16384")
 
 target_link_libraries(jlottie rlottie)
 target_link_libraries(jlottie jlz4)
 target_link_libraries(jlottie rlottie2gif)
+
 target_link_libraries( # Specifies the target library.
         jlottie
         -ljnigraphics
@@ -219,10 +241,7 @@ target_link_libraries( # Specifies the target library.
         # included in the NDK.
         ${log-lib} )
 
-
-
 export(EXPORT rlottie-targets FILE ${CMAKE_CURRENT_BINARY_DIR}/rlottieTargets.cmake NAMESPACE rlottie::)
 
 #Register package in user's package registry
 export(PACKAGE rlottie)
-
