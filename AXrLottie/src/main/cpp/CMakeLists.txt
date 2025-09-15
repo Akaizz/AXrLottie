@@ -75,32 +75,11 @@ if (WIN32 AND NOT BUILD_SHARED_LIBS)
     target_compile_definitions(rlottie PUBLIC -DRLOTTIE_BUILD=0)
 endif()
 
-# Check if we're building for ARM and enable ASM compiler for NEON
-if(ANDROID AND (CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a"))
-    enable_language(ASM)
-
-    # Add pixman NEON assembly sources for ARM builds
-    if(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
-        # For ARMv7 with NEON
-        set(PIXMAN_ARM_NEON_SOURCES
-                src/vector/pixman/pixman-arm-neon-asm.S
-                src/vector/pixman/pixman-arm-neon.c
-        )
-        target_compile_definitions(rlottie PRIVATE -DPIXMAN_ARM_NEON)
-    elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
-        # For ARM64 with NEON
-        set(PIXMAN_ARM_NEON_SOURCES
-                src/vector/pixman/pixman-arm-neon-asm-bilinear.S
-                src/vector/pixman/pixman-arm-neon.c
-        )
-        target_compile_definitions(rlottie PRIVATE -DPIXMAN_ARM_NEON)
-    endif()
-
-    # Add the pixman sources to rlottie target
-    target_sources(rlottie PRIVATE ${PIXMAN_ARM_NEON_SOURCES})
-
-    # Set ASM flags for NEON assembly
-    set_property(SOURCE ${PIXMAN_ARM_NEON_SOURCES} PROPERTY COMPILE_FLAGS "-mfpu=neon")
+# ARM NEON optimizations - disabled due to assembly compatibility issues with Android NDK
+# The C implementations provide sufficient performance for mobile use
+if (ANDROID AND (CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a"))
+    # Enable NEON define for C code optimizations only
+    target_compile_definitions(rlottie PRIVATE -DPIXMAN_ARM_NEON)
 endif()
 
 #declare dependancy
