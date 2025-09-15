@@ -6,6 +6,9 @@ if(LOTTIE_MODULE)
                            -fvisibility=hidden
                           )
 
+    # Use 16 KB ELF alignment to support devices with page size greater than 4 KB
+    target_link_options(rlottie-image-loader PRIVATE "-Wl,-z,max-page-size=16384")
+
     get_filename_component(LOTTIE_MODULE_FILENAME ${LOTTIE_MODULE_PATH} NAME)
     get_filename_component(LOTTIE_MODULE_DIR ${LOTTIE_MODULE_PATH} DIRECTORY)
     if (NOT LOTTIE_MODULE_DIR)

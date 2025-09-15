@@ -3,20 +3,14 @@ plugins {
 }
 
 android {
-    compileSdkVersion 32
+    compileSdkVersion 35
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 32
+        targetSdkVersion 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
-        externalNativeBuild {
-            cmake {
-                arguments "-DANDROID_ARM_NEON=OFF"
-                cppFlags "-std=c++14"
-            }
-        }
     }
 
     buildTypes {
@@ -24,14 +18,12 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
 
-        externalNativeBuild {
-            cmake {
-                path "src/main/cpp/CMakeLists.txt"
-                version "3.10.2"
-            }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
         }
-
     }
 
     packagingOptions {
