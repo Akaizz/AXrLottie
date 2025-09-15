@@ -19,6 +19,13 @@ android {
         }
     }
 
+    packagingOptions {
+        // Use compressed shared libraries to support 16 KB ELF alignment
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
