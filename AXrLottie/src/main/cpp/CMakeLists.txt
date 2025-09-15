@@ -15,6 +15,8 @@ endif()
 #declare target
 add_library( rlottie )
 set_target_properties( rlottie PROPERTIES DEFINE_SYMBOL RLOTTIE_BUILD )
+# Use 16 KB ELF alignment to support devices with page size greater than 4 KB
+target_link_options(rlottie PRIVATE "-Wl,-z,max-page-size=16384")
 
 #declare version of the target
 set(player_version_major 0)
@@ -187,17 +189,25 @@ install(FILES
 
 
 add_library(jlottie SHARED lottie.cpp)
+# Use 16 KB ELF alignment to support devices with page size greater than 4 KB
+target_link_options(jlottie PRIVATE "-Wl,-z,max-page-size=16384")
+
 add_library(jlz4 SHARED lz4/lz4.c)
 target_include_directories(jlottie
         PRIVATE
         "${CMAKE_CURRENT_LIST_DIR}"
         )
+# Use 16 KB ELF alignment to support devices with page size greater than 4 KB
+target_link_options(jlz4 PRIVATE "-Wl,-z,max-page-size=16384")
 
 add_library(rlottie2gif SHARED gif/gif.cpp)
 target_include_directories(rlottie2gif
         PRIVATE
         "${CMAKE_CURRENT_LIST_DIR}/gif"
         )
+
+# Use 16 KB ELF alignment to support devices with page size greater than 4 KB
+target_link_options(rlottie2gif PRIVATE "-Wl,-z,max-page-size=16384")
 
 target_link_libraries(jlottie rlottie)
 target_link_libraries(jlottie jlz4)
